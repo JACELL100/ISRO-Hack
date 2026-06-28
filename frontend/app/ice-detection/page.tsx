@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import dynamic from 'next/dynamic';
+import { IconCrystal, IconMap, IconFlask, IconPin } from '@/components/Icons';
 const Heatmap = dynamic(() => import('@/components/Heatmap'), { ssr: false });
 
 const TIER_COLORS: Record<number, string> = { 1: 'var(--cyan)', 2: 'var(--purple-bright)', 3: 'var(--orange)' };
@@ -22,7 +23,7 @@ export default function IceDetectionPage() {
 
   const maps = data ? {
     ice: { data: data.ice_mask_data, colormap: 'ice' as const, title: 'Validated Ice Mask (CPR>1 & DOP<0.13)' },
-    prob: { data: data.probability_data, colormap: 'prob' as const, title: 'Ice Probability Map [0–1]' },
+    prob: { data: data.probability_data, colormap: 'prob' as const, title: 'Ice Probability Map [0-1]' },
     conf: { data: data.confidence_data, colormap: 'plasma' as const, title: 'Detection Confidence Map' },
   } : {};
 
@@ -38,7 +39,7 @@ export default function IceDetectionPage() {
   return (
     <>
       <div className="page-header">
-        <div className="page-header-badge">🧊 Ice Detection</div>
+        <div className="page-header-badge"><IconCrystal size={13} /> Ice Detection</div>
         <h1 className="page-title">Subsurface Ice Detection Results</h1>
         <p className="page-subtitle">
           CPR {'>'} 1 AND DOP {'<'} 0.13 within PSRs · Priority-tiered ice regions · Confidence mapping
@@ -85,7 +86,7 @@ export default function IceDetectionPage() {
             <div className="grid-2" style={{ alignItems: 'start' }}>
               <div className="card">
                 <div className="card-header">
-                  <span className="card-title">🗺️ Detection Maps</span>
+                  <span className="card-title"><IconMap size={16} /> Detection Maps</span>
                 </div>
                 <div className="card-body">
                   <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
@@ -108,9 +109,9 @@ export default function IceDetectionPage() {
                   {/* Legend */}
                   <div style={{ display: 'flex', gap: 16, marginTop: 12, flexWrap: 'wrap' }}>
                     {[1, 2, 3].map(t => (
-                      <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <div style={{ width: 10, height: 10, borderRadius: '50%', background: TIER_COLORS[t] }} />
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Tier {t}</span>
+                      <div key={t} className="legend-item">
+                        <div className="legend-dot" style={{ background: TIER_COLORS[t], width: 10, height: 10 }} />
+                        <span>Tier {t}</span>
                       </div>
                     ))}
                   </div>
@@ -121,7 +122,7 @@ export default function IceDetectionPage() {
                 {/* Criteria */}
                 <div className="card">
                   <div className="card-header">
-                    <span className="card-title">🔬 Detection Criteria</span>
+                    <span className="card-title"><IconFlask size={16} /> Detection Criteria</span>
                     <span className="badge badge-safe">Applied</span>
                   </div>
                   <div className="card-body">
@@ -151,7 +152,7 @@ export default function IceDetectionPage() {
                 {/* Ice regions table */}
                 <div className="card">
                   <div className="card-header">
-                    <span className="card-title">📍 Detected Ice Regions</span>
+                    <span className="card-title"><IconPin size={16} /> Detected Ice Regions</span>
                   </div>
                   <div style={{ overflowX: 'auto', padding: '0 16px 16px' }}>
                     <table className="data-table">

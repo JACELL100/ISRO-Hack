@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import dynamic from 'next/dynamic';
+import { IconMoon, IconMap, IconCrater, IconThermometer } from '@/components/Icons';
 const Heatmap = dynamic(() => import('@/components/Heatmap'), { ssr: false });
 
 export default function ShadowMappingPage() {
@@ -45,7 +46,7 @@ export default function ShadowMappingPage() {
   return (
     <>
       <div className="page-header">
-        <div className="page-header-badge">🌑 Shadow Mapping</div>
+        <div className="page-header-badge"><IconMoon size={13} /> Shadow Mapping</div>
         <h1 className="page-title">Shadow & PSR Mapping</h1>
         <p className="page-subtitle">
           Solar illumination modeling · Permanently Shadowed Region identification · Doubly shadowed crater detection
@@ -91,7 +92,7 @@ export default function ShadowMappingPage() {
             <div className="grid-2" style={{ alignItems: 'start' }}>
               <div className="card">
                 <div className="card-header">
-                  <span className="card-title">🗺️ Data Layer Viewer</span>
+                  <span className="card-title"><IconMap size={16} /> Data Layer Viewer</span>
                 </div>
                 <div className="card-body">
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
@@ -127,7 +128,7 @@ export default function ShadowMappingPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div className="card">
                   <div className="card-header">
-                    <span className="card-title">🌑 PSR Regions</span>
+                    <span className="card-title"><IconMoon size={16} /> PSR Regions</span>
                   </div>
                   <div className="card-body" style={{ padding: '12px 20px' }}>
                     <table className="data-table">
@@ -151,7 +152,7 @@ export default function ShadowMappingPage() {
 
                 <div className="card">
                   <div className="card-header">
-                    <span className="card-title">🕳️ Doubly Shadowed Craters</span>
+                    <span className="card-title"><IconCrater size={16} /> Doubly Shadowed Craters</span>
                     <span className="badge badge-tier1">Priority Targets</span>
                   </div>
                   <div className="card-body" style={{ padding: '12px 20px' }}>
@@ -179,7 +180,7 @@ export default function ShadowMappingPage() {
 
                 <div className="card">
                   <div className="card-header">
-                    <span className="card-title">🌡️ DEM Statistics</span>
+                    <span className="card-title"><IconThermometer size={16} /> DEM Statistics</span>
                   </div>
                   <div className="card-body">
                     <div className="metric-row"><span className="label">Min Elevation</span><span className="value">{data.dem_stats.min_m} m</span></div>

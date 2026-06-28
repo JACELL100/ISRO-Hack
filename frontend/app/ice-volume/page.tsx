@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
+import { IconDroplet, IconChart, IconAtom, IconTrendUp, IconCrystal } from '@/components/Icons';
 
 function MonteCarloBars({ samples, color = 'var(--cyan)' }: { samples: number[]; color?: string }) {
   if (!samples?.length) return null;
@@ -39,7 +40,7 @@ export default function IceVolumePage() {
   return (
     <>
       <div className="page-header">
-        <div className="page-header-badge">💧 Ice Volume</div>
+        <div className="page-header-badge"><IconDroplet size={13} /> Ice Volume</div>
         <h1 className="page-title">Subsurface Ice Volume Estimation</h1>
         <p className="page-subtitle">
           CRIM dielectric mixing model · CPR inversion · Monte Carlo uncertainty (n=2000)
@@ -48,10 +49,10 @@ export default function IceVolumePage() {
 
       <div className="page-body">
         <div className="info-block">
-          <strong>Model:</strong> ε_eff = [f·√ε_ice + (1-f)·√ε_regolith]² (CRIM mixing model).
-          Ice fraction <em>f</em> inverted from CPR values. Ice volume = f × area × depth (5m).
+          <strong>Model:</strong> epsilon_eff = [f * sqrt(epsilon_ice) + (1-f) * sqrt(epsilon_regolith)]² (CRIM mixing model).
+          Ice fraction <em>f</em> inverted from CPR values. Ice volume = f x area x depth (5m).
           Monte Carlo (2000 samples) propagates uncertainty in ice fraction and depth.
-          ε_ice = 3.15, ε_regolith = 3.0 (typical lunar values).
+          epsilon_ice = 3.15, epsilon_regolith = 3.0 (typical lunar values).
         </div>
 
         {loading ? (
@@ -62,9 +63,9 @@ export default function IceVolumePage() {
             <div className="card" style={{
               marginBottom: 24, padding: '28px 32px',
               background: 'linear-gradient(135deg, rgba(0,20,50,0.95), rgba(20,5,50,0.95))',
-              border: '1px solid rgba(0,212,255,0.25)',
+              border: '1px solid rgba(0,212,255,0.2)',
             }}>
-              <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16, fontWeight: 600 }}>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16, fontWeight: 600, letterSpacing: '0.5px' }}>
                 TOTAL SUBSURFACE ICE ESTIMATE (Top {data.depth_modeled_m}m)
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
@@ -75,19 +76,19 @@ export default function IceVolumePage() {
                   { label: 'Mean Ice Fraction', value: `${data.mean_ice_fraction_pct}%`, color: 'var(--orange)' },
                 ].map(item => (
                   <div key={item.label} style={{ textAlign: 'center' }}>
-                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 800, color: item.color }}>{item.value}</div>
+                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 800, color: item.color, letterSpacing: '-0.5px' }}>{item.value}</div>
                     <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{item.label}</div>
                   </div>
                 ))}
               </div>
               {/* Uncertainty band */}
-              <div style={{ marginTop: 20, padding: '12px 16px', background: 'rgba(0,0,0,0.3)', borderRadius: 8 }}>
+              <div style={{ marginTop: 20, padding: '12px 16px', background: 'rgba(0,0,0,0.25)', borderRadius: 8 }}>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>Volume Uncertainty (90% CI)</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
                     P5: {(data.volume_p5_m3 / 1e6).toFixed(3)} M m³
                   </span>
-                  <div style={{ flex: 1, height: 6, background: 'rgba(0,212,255,0.1)', borderRadius: 3, position: 'relative' }}>
+                  <div style={{ flex: 1, height: 5, background: 'rgba(0,212,255,0.08)', borderRadius: 3, position: 'relative' }}>
                     <div style={{
                       position: 'absolute',
                       left: `${(data.volume_p5_m3 / data.volume_p95_m3) * 100}%`,
@@ -107,7 +108,7 @@ export default function IceVolumePage() {
             <div className="grid-2" style={{ alignItems: 'start', marginBottom: 24 }}>
               {/* Monte Carlo distributions */}
               <div className="card">
-                <div className="card-header"><span className="card-title">📊 Monte Carlo Distributions</span></div>
+                <div className="card-header"><span className="card-title"><IconChart size={16} /> Monte Carlo Distributions</span></div>
                 <div className="card-body">
                   <div style={{ marginBottom: 20 }}>
                     <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>Ice Fraction Samples</div>
@@ -134,7 +135,7 @@ export default function IceVolumePage() {
               {/* Physical constants & CPR table */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div className="card">
-                  <div className="card-header"><span className="card-title">⚛️ Physical Parameters</span></div>
+                  <div className="card-header"><span className="card-title"><IconAtom size={16} /> Physical Parameters</span></div>
                   <div className="card-body">
                     {Object.entries(data.physical_constants || {}).map(([key, val]: any) => (
                       <div key={key} className="metric-row">
@@ -146,7 +147,7 @@ export default function IceVolumePage() {
                 </div>
 
                 <div className="card">
-                  <div className="card-header"><span className="card-title">📈 CPR → Ice Fraction Lookup</span></div>
+                  <div className="card-header"><span className="card-title"><IconTrendUp size={16} /> CPR to Ice Fraction Lookup</span></div>
                   <div style={{ padding: '0 16px 16px', overflowX: 'auto' }}>
                     <table className="data-table">
                       <thead>
@@ -157,7 +158,7 @@ export default function IceVolumePage() {
                           <tr key={row.cpr}>
                             <td className="mono">{row.cpr}</td>
                             <td className="mono" style={{ color: 'var(--cyan)' }}>{row.ice_fraction_pct}%</td>
-                            <td style={{ fontSize: 11, color: 'var(--text-muted)' }}>±{row.uncertainty_pct}%</td>
+                            <td style={{ fontSize: 11, color: 'var(--text-muted)' }}>+/-{row.uncertainty_pct}%</td>
                           </tr>
                         ))}
                       </tbody>
@@ -170,7 +171,7 @@ export default function IceVolumePage() {
             {/* Region breakdown */}
             <div className="card">
               <div className="card-header">
-                <span className="card-title">🧊 Volume by Ice Region</span>
+                <span className="card-title"><IconCrystal size={16} /> Volume by Ice Region</span>
                 <span className="badge badge-tier1">{data.regions?.length} Regions</span>
               </div>
               <div style={{ overflowX: 'auto', padding: '0 16px 16px' }}>

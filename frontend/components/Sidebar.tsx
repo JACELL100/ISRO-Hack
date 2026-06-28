@@ -2,16 +2,20 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import React from 'react';
+import {
+  IconDashboard, IconMoon, IconRadar, IconCrystal, IconMountain,
+  IconTarget, IconRoute, IconDroplet, IconMoon as IconLogo,
+} from './Icons';
 
 const navItems = [
-  { href: '/', label: 'Mission Overview', icon: '🛰️', section: 'Dashboard' },
-  { href: '/shadow-mapping', label: 'Shadow & PSR Mapping', icon: '🌑', section: 'Analysis' },
-  { href: '/polarimetric', label: 'Polarimetric Analysis', icon: '📡', section: 'Analysis' },
-  { href: '/ice-detection', label: 'Ice Detection', icon: '🧊', section: 'Analysis' },
-  { href: '/terrain', label: 'Terrain Analysis', icon: '🗺️', section: 'Analysis' },
-  { href: '/landing-site', label: 'Landing Site', icon: '🎯', section: 'Mission Planning' },
-  { href: '/path-planning', label: 'Rover Traverse', icon: '🤖', section: 'Mission Planning' },
-  { href: '/ice-volume', label: 'Ice Volume Estimate', icon: '💧', section: 'Science' },
+  { href: '/', label: 'Mission Overview', Icon: IconDashboard, section: 'Dashboard' },
+  { href: '/shadow-mapping', label: 'Shadow & PSR Mapping', Icon: IconMoon, section: 'Analysis' },
+  { href: '/polarimetric', label: 'Polarimetric Analysis', Icon: IconRadar, section: 'Analysis' },
+  { href: '/ice-detection', label: 'Ice Detection', Icon: IconCrystal, section: 'Analysis' },
+  { href: '/terrain', label: 'Terrain Analysis', Icon: IconMountain, section: 'Analysis' },
+  { href: '/landing-site', label: 'Landing Site', Icon: IconTarget, section: 'Mission Planning' },
+  { href: '/path-planning', label: 'Rover Traverse', Icon: IconRoute, section: 'Mission Planning' },
+  { href: '/ice-volume', label: 'Ice Volume Estimate', Icon: IconDroplet, section: 'Science' },
 ];
 
 function ApiStatusBadge() {
@@ -35,18 +39,18 @@ function ApiStatusBadge() {
   }, []);
 
   const cfg = {
-    checking: { color: '#64748b', label: 'Connecting...' },
+    checking: { color: '#64748b', label: 'Connecting' },
     online:   { color: '#10b981', label: 'API Online' },
     offline:  { color: '#ef4444', label: 'API Offline — start backend' },
   }[status];
 
   return (
     <div style={{
-      display: 'flex', alignItems: 'center', gap: 7,
-      padding: '6px 10px', borderRadius: 8,
-      background: 'rgba(0,0,0,0.3)',
-      border: `1px solid ${status === 'online' ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.06)'}`,
-      marginBottom: 10,
+      display: 'flex', alignItems: 'center', gap: 8,
+      padding: '8px 11px', borderRadius: 8,
+      background: 'rgba(0,0,0,0.25)',
+      border: `1px solid ${status === 'online' ? 'rgba(16,185,129,0.2)' : 'rgba(255,255,255,0.05)'}`,
+      marginBottom: 12,
     }}>
       <div style={{
         width: 7, height: 7, borderRadius: '50%',
@@ -69,27 +73,44 @@ export default function Sidebar() {
   return (
     <nav className="sidebar">
       <div className="sidebar-logo">
-        <div className="sidebar-logo-badge">
-          <span>🚀</span> BAH 2026
-        </div>
-        <h1>Lunar Ice Explorer</h1>
-        <p>Chandrayaan-2 DFSAR Analysis</p>
+        <Link href="/" style={{ textDecoration: 'none' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginBottom: 14 }}>
+            <div style={{
+              width: 38, height: 38, borderRadius: 10,
+              background: 'linear-gradient(135deg, rgba(0,212,255,0.18), rgba(168,85,247,0.18))',
+              border: '1px solid rgba(0,212,255,0.25)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <IconLogo size={20} color="var(--cyan)" />
+            </div>
+            <div>
+              <h1>Lunar Ice Explorer</h1>
+              <p>Chandrayaan-2 DFSAR Analysis</p>
+            </div>
+          </div>
+        </Link>
+        <div className="sidebar-logo-badge">BAH 2026 · PS-08</div>
       </div>
 
       <div className="sidebar-nav">
         {sections.map(section => (
           <div key={section}>
             <div className="nav-section-label">{section}</div>
-            {navItems.filter(i => i.section === section).map(item => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`nav-item ${pathname === item.href ? 'active' : ''}`}
-              >
-                <span style={{ fontSize: 16 }}>{item.icon}</span>
-                <span>{item.label}</span>
-              </Link>
-            ))}
+            {navItems.filter(i => i.section === section).map(item => {
+              const ItemIcon = item.Icon;
+              const isActive = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`nav-item ${isActive ? 'active' : ''}`}
+                >
+                  <ItemIcon size={17} className="nav-icon" color={isActive ? 'var(--cyan)' : 'currentColor'} />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
           </div>
         ))}
       </div>

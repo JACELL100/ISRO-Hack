@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import dynamic from 'next/dynamic';
+import { IconRoute, IconMap, IconTrendUp, IconChart, IconPin, IconWarning, IconShield } from '@/components/Icons';
 const Heatmap = dynamic(() => import('@/components/Heatmap'), { ssr: false });
 
 function ElevationChart({ profile, slopes }: { profile: number[]; slopes: number[] }) {
@@ -67,7 +68,7 @@ export default function PathPlanningPage() {
   return (
     <>
       <div className="page-header">
-        <div className="page-header-badge">🤖 Rover Traverse</div>
+        <div className="page-header-badge"><IconRoute size={13} /> Rover Traverse</div>
         <h1 className="page-title">Rover Traverse Path Planning</h1>
         <p className="page-subtitle">
           A* optimal path · Terrain-aware cost function · Hazard avoidance · Solar power constraints
@@ -76,16 +77,18 @@ export default function PathPlanningPage() {
 
       <div className="page-body">
         <div className="info-block">
-          <strong>A* Algorithm:</strong> Cost = 0.35×slope + 0.20×roughness + 0.15×shadow + 0.30×hazard.
+          <strong>A* Algorithm:</strong> Cost = 0.35 x slope + 0.20 x roughness + 0.15 x shadow + 0.30 x hazard.
           Slopes {'>'} 25° are impassable. Crater proximity adds hazard penalty.
-          Path smoothed with Gaussian filter (σ=3). Rover speed assumed 100 m/hr.
+          Path smoothed with Gaussian filter (sigma=3). Rover speed assumed 100 m/hr.
         </div>
 
         {loading ? (
           <div className="loading-state"><div className="spinner" /><span>Computing optimal traverse...</span></div>
         ) : data?.success === false ? (
           <div className="info-block" style={{ borderLeftColor: 'var(--red)' }}>
-            <strong>⚠️ No traversable path found:</strong> {data.error}
+            <strong style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <IconWarning size={15} color="var(--red)" /> No traversable path found:
+            </strong> {data.error}
           </div>
         ) : data ? (
           <>
@@ -110,8 +113,8 @@ export default function PathPlanningPage() {
               </div>
               <div className="stat-card">
                 <div className="stat-label">Path Safety</div>
-                <div className="stat-value" style={{ fontSize: 18, color: safetyColor }}>
-                  {metrics.path_safety === 'SAFE' ? '✅' : metrics.path_safety === 'CAUTION' ? '⚠️' : '🚨'} {metrics.path_safety}
+                <div className="stat-value" style={{ fontSize: 18, color: safetyColor, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <IconShield size={18} color={safetyColor} /> {metrics.path_safety}
                 </div>
               </div>
             </div>
@@ -120,11 +123,11 @@ export default function PathPlanningPage() {
               {/* Path visualization */}
               <div className="card">
                 <div className="card-header">
-                  <span className="card-title">🗺️ Traverse Map</span>
+                  <span className="card-title"><IconMap size={16} /> Traverse Map</span>
                   <div style={{ display: 'flex', gap: 12, fontSize: 11 }}>
-                    <span style={{ color: 'var(--green)' }}>🟢 Landing</span>
-                    <span style={{ color: 'var(--red)' }}>🔴 Target</span>
-                    <span style={{ color: 'var(--cyan)' }}>─ Path</span>
+                    <div className="legend-item"><div className="legend-dot" style={{ background: '#00ff88', width: 8, height: 8 }} />Landing</div>
+                    <div className="legend-item"><div className="legend-dot" style={{ background: '#ff4444', width: 8, height: 8 }} />Target</div>
+                    <div className="legend-item"><div style={{ width: 16, height: 2, background: 'var(--cyan)', borderRadius: 1 }} />Path</div>
                   </div>
                 </div>
                 <div className="card-body">
@@ -161,7 +164,7 @@ export default function PathPlanningPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {/* Elevation profile */}
                 <div className="card">
-                  <div className="card-header"><span className="card-title">📈 Elevation Profile</span></div>
+                  <div className="card-header"><span className="card-title"><IconTrendUp size={16} /> Elevation Profile</span></div>
                   <div className="card-body">
                     <ElevationChart profile={metrics.elevation_profile || []} slopes={metrics.slope_profile || []} />
                     <div className="grid-2" style={{ marginTop: 12, gap: 10 }}>
@@ -173,7 +176,7 @@ export default function PathPlanningPage() {
 
                 {/* Path metrics */}
                 <div className="card">
-                  <div className="card-header"><span className="card-title">📊 Path Metrics</span></div>
+                  <div className="card-header"><span className="card-title"><IconChart size={16} /> Path Metrics</span></div>
                   <div className="card-body">
                     <div className="metric-row"><span className="label">Distance</span><span className="value">{metrics.total_distance_km} km</span></div>
                     <div className="metric-row"><span className="label">Waypoints</span><span className="value">{metrics.n_waypoints}</span></div>
@@ -193,11 +196,13 @@ export default function PathPlanningPage() {
 
                 {/* Start/Goal Info */}
                 <div className="card">
-                  <div className="card-header"><span className="card-title">📍 Route Points</span></div>
+                  <div className="card-header"><span className="card-title"><IconPin size={16} /> Route Points</span></div>
                   <div className="card-body">
                     {data.landing_site && (
                       <div style={{ marginBottom: 14, padding: '12px', background: 'rgba(16,185,129,0.07)', borderRadius: 8, border: '1px solid rgba(16,185,129,0.2)' }}>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--green)', marginBottom: 6 }}>🟢 Landing Site</div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--green)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <div className="legend-dot" style={{ background: '#00ff88', width: 8, height: 8 }} /> Landing Site
+                        </div>
                         <div className="metric-row" style={{ padding: '4px 0' }}><span className="label">Score</span><span className="value">{(data.landing_site.composite_score * 100).toFixed(0)}%</span></div>
                         <div className="metric-row" style={{ padding: '4px 0' }}><span className="label">Elevation</span><span className="value">{data.landing_site.elevation_m} m</span></div>
                         <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>{data.landing_site.description}</p>
@@ -205,7 +210,9 @@ export default function PathPlanningPage() {
                     )}
                     {data.target_crater && (
                       <div style={{ padding: '12px', background: 'rgba(239,68,68,0.07)', borderRadius: 8, border: '1px solid rgba(239,68,68,0.2)' }}>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--red)', marginBottom: 6 }}>🔴 Target: Doubly Shadowed Crater</div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--red)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <div className="legend-dot" style={{ background: '#ff4444', width: 8, height: 8 }} /> Target: Doubly Shadowed Crater
+                        </div>
                         <div className="metric-row" style={{ padding: '4px 0' }}><span className="label">Max Depth</span><span className="value">{data.target_crater.max_depth_m?.toFixed(0)} m</span></div>
                         <div className="metric-row" style={{ padding: '4px 0' }}><span className="label">Area</span><span className="value">{data.target_crater.area_pixels} px</span></div>
                         <div className="metric-row" style={{ padding: '4px 0' }}><span className="label">Min Elevation</span><span className="value">{data.target_crater.min_elevation_m?.toFixed(0)} m</span></div>

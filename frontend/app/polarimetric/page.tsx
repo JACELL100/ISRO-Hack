@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import dynamic from 'next/dynamic';
+import { IconRadar, IconMap, IconChart, IconLayers } from '@/components/Icons';
 const Heatmap = dynamic(() => import('@/components/Heatmap'), { ssr: false });
 
 function BarChart({ data, color = 'var(--cyan)', threshold }: { data: { bin: number; count: number }[]; color?: string; threshold?: number }) {
@@ -31,7 +32,7 @@ function BandBadge({ label, freq, wl, depth, color }: { label: string; freq: str
       <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
       <div>
         <div style={{ fontSize: 13, fontWeight: 700, color }}>{label}</div>
-        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{freq} · λ={wl} · depth≈{depth}</div>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{freq} · lambda={wl} · depth~{depth}</div>
       </div>
     </div>
   );
@@ -48,46 +49,46 @@ export default function PolarimetricPage() {
   }, []);
 
   const lbandMaps: Record<string, { data: any[][]; colormap: any; label: string; hint: string }> = data ? {
-    cpr:     { data: data.cpr_data,     colormap: 'cpr',     label: 'L-band CPR (430 MHz, 24 cm)',  hint: '🔴 Red: CPR > 1 — volumetric scattering (ice). Blue: surface.' },
-    dop:     { data: data.dop_data,     colormap: 'dop',     label: 'L-band DOP',                   hint: '🔵 Blue: DOP < 0.13 — depolarized = ice candidate.' },
-    s0:      { data: data.s0_data,      colormap: 'viridis', label: 'L-band Total Power (S₀)',       hint: 'Total backscatter power from L-band DFSAR.' },
+    cpr:     { data: data.cpr_data,     colormap: 'cpr',     label: 'L-band CPR (430 MHz, 24 cm)',  hint: 'Red: CPR > 1 — volumetric scattering (ice). Blue: surface.' },
+    dop:     { data: data.dop_data,     colormap: 'dop',     label: 'L-band DOP',                   hint: 'Blue: DOP < 0.13 — depolarized = ice candidate.' },
+    s0:      { data: data.s0_data,      colormap: 'viridis', label: 'L-band Total Power (S0)',       hint: 'Total backscatter power from L-band DFSAR.' },
     entropy: { data: data.entropy_data, colormap: 'plasma',  label: 'L-band Scattering Entropy',     hint: 'Higher entropy → more random scattering (ice-like).' },
   } : {};
 
   const sbandMaps: Record<string, { data: any[][]; colormap: any; label: string; hint: string }> = data ? {
-    cpr_s: { data: data.cpr_s_data, colormap: 'cpr',     label: 'S-band CPR (2.5 GHz, 9 cm)', hint: '🔴 Red: CPR_S > 1 — S-band volumetric scattering.' },
-    dop_s: { data: data.dop_s_data, colormap: 'dop',     label: 'S-band DOP',                  hint: '🔵 Blue: DOP_S < 0.13 — S-band depolarization.' },
-    s0_s:  { data: data.s0_s_data,  colormap: 'viridis', label: 'S-band Total Power (S₀)',      hint: 'Total backscatter power from S-band DFSAR.' },
+    cpr_s: { data: data.cpr_s_data, colormap: 'cpr',     label: 'S-band CPR (2.5 GHz, 9 cm)', hint: 'Red: CPR_S > 1 — S-band volumetric scattering.' },
+    dop_s: { data: data.dop_s_data, colormap: 'dop',     label: 'S-band DOP',                  hint: 'Blue: DOP_S < 0.13 — S-band depolarization.' },
+    s0_s:  { data: data.s0_s_data,  colormap: 'viridis', label: 'S-band Total Power (S0)',      hint: 'Total backscatter power from S-band DFSAR.' },
   } : {};
 
   const dualMaps: Record<string, { data: any[][]; colormap: any; label: string; hint: string }> = data ? {
     dfr:            { data: data.dfr_data,                colormap: 'viridis', label: 'Dual-Frequency Ratio (CPR_L / CPR_S)',  hint: 'DFR > 1 → deep subsurface ice. DFR ≈ 1 → surface roughness.' },
     dual_conf:      { data: data.dual_confidence_data,    colormap: 'plasma',  label: 'Dual-Frequency Ice Confidence',          hint: 'Combined L+S confidence. High = both bands agree on ice.' },
-    dual_confirmed: { data: data.ice_dual_confirmed_data, colormap: 'cpr',     label: 'Dual-Frequency Confirmed Ice',           hint: '🟡 Both L-band and S-band ice criteria met — highest confidence.' },
+    dual_confirmed: { data: data.ice_dual_confirmed_data, colormap: 'cpr',     label: 'Dual-Frequency Confirmed Ice',           hint: 'Both L-band and S-band ice criteria met — highest confidence.' },
   } : {};
 
   const tabMaps = activeTab === 'lband' ? lbandMaps : activeTab === 'sband' ? sbandMaps : dualMaps;
 
   const TABS = [
-    { key: 'lband', label: '📡 L-band (24 cm)', color: 'var(--cyan)' },
-    { key: 'sband', label: '📡 S-band (9 cm)',  color: '#f472b6' },
-    { key: 'dual',  label: '🔀 Dual-Frequency', color: 'var(--green)' },
+    { key: 'lband', label: 'L-band (24 cm)', color: 'var(--cyan)' },
+    { key: 'sband', label: 'S-band (9 cm)',  color: '#f472b6' },
+    { key: 'dual',  label: 'Dual-Frequency', color: 'var(--green)' },
   ] as const;
 
   return (
     <>
       <div className="page-header">
-        <div className="page-header-badge">📡 Dual-Frequency Polarimetric Analysis</div>
+        <div className="page-header-badge"><IconRadar size={13} /> Dual-Frequency Polarimetric Analysis</div>
         <h1 className="page-title">DFSAR Polarimetric Analysis — L-band & S-band</h1>
         <p className="page-subtitle">Chandrayaan-2 DFSAR dual-frequency · L-band (430 MHz) + S-band (2.5 GHz) · CPR+DOP ice detection</p>
       </div>
 
       <div className="page-body">
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
-          <BandBadge label="L-band" freq="430 MHz" wl="24 cm" depth="~5 m"   color="var(--cyan)" />
-          <BandBadge label="S-band" freq="2.5 GHz" wl="9 cm"  depth="~1.5 m" color="#f472b6" />
+          <BandBadge label="L-band" freq="430 MHz" wl="24 cm" depth="5 m"   color="var(--cyan)" />
+          <BandBadge label="S-band" freq="2.5 GHz" wl="9 cm"  depth="1.5 m" color="#f472b6" />
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.3)', borderRadius: 8, padding: '8px 14px', fontSize: 12, color: 'var(--text-secondary)' }}>
-            💡 Dual-frequency DFR analysis eliminates rough-terrain false positives (Nozette et al. 1996)
+            Dual-frequency DFR analysis eliminates rough-terrain false positives (Nozette et al. 1996)
           </div>
         </div>
 
@@ -141,7 +142,7 @@ export default function PolarimetricPage() {
               {/* Map viewer */}
               <div className="card">
                 <div className="card-header">
-                  <span className="card-title">🗺️ Polarimetric Maps</span>
+                  <span className="card-title"><IconMap size={16} /> Polarimetric Maps</span>
                   <span className="badge" style={{
                     background: activeTab === 'lband' ? 'rgba(0,212,255,0.15)' : activeTab === 'sband' ? 'rgba(244,114,182,0.15)' : 'rgba(52,211,153,0.15)',
                     color: activeTab === 'lband' ? 'var(--cyan)' : activeTab === 'sband' ? '#f472b6' : 'var(--green)',
@@ -170,7 +171,7 @@ export default function PolarimetricPage() {
               {/* Stats */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div className="card">
-                  <div className="card-header"><span className="card-title" style={{ color: 'var(--cyan)' }}>📡 L-band CPR Histogram</span></div>
+                  <div className="card-header"><span className="card-title" style={{ color: 'var(--cyan)' }}><IconChart size={16} /> L-band CPR Histogram</span></div>
                   <div className="card-body">
                     <BarChart data={data.cpr_histogram} color="rgba(0,212,255,0.7)" threshold={1.0} />
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
@@ -189,7 +190,7 @@ export default function PolarimetricPage() {
 
                 {data.cpr_s_histogram && (
                   <div className="card">
-                    <div className="card-header"><span className="card-title" style={{ color: '#f472b6' }}>📡 S-band CPR Histogram</span></div>
+                    <div className="card-header"><span className="card-title" style={{ color: '#f472b6' }}><IconChart size={16} /> S-band CPR Histogram</span></div>
                     <div className="card-body">
                       <BarChart data={data.cpr_s_histogram} color="rgba(244,114,182,0.7)" threshold={1.0} />
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
@@ -204,7 +205,7 @@ export default function PolarimetricPage() {
                 )}
 
                 <div className="card">
-                  <div className="card-header"><span className="card-title">🔀 Dual-Frequency Summary</span></div>
+                  <div className="card-header"><span className="card-title"><IconLayers size={16} /> Dual-Frequency Summary</span></div>
                   <div className="card-body">
                     {[
                       { label: 'L-band ice (430 MHz)',  value: `${(data.n_ice_L_band ?? data.n_pixels_both)?.toLocaleString()} px`, color: 'var(--cyan)' },

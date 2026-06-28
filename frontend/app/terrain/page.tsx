@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import dynamic from 'next/dynamic';
+import { IconMountain, IconMap, IconChart, IconRuler, IconCrater } from '@/components/Icons';
 const Heatmap = dynamic(() => import('@/components/Heatmap'), { ssr: false });
 
 export default function TerrainPage() {
@@ -31,7 +32,7 @@ export default function TerrainPage() {
   return (
     <>
       <div className="page-header">
-        <div className="page-header-badge">🗺️ Terrain Analysis</div>
+        <div className="page-header-badge"><IconMountain size={13} /> Terrain Analysis</div>
         <h1 className="page-title">Terrain Analysis</h1>
         <p className="page-subtitle">
           DEM-based slope, roughness, crater detection · OHRC boulder mapping · Landing safety assessment
@@ -71,7 +72,7 @@ export default function TerrainPage() {
             <div className="grid-2" style={{ alignItems: 'start' }}>
               <div className="card">
                 <div className="card-header">
-                  <span className="card-title">🗺️ Terrain Maps</span>
+                  <span className="card-title"><IconMap size={16} /> Terrain Maps</span>
                 </div>
                 <div className="card-body">
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
@@ -92,8 +93,11 @@ export default function TerrainPage() {
                     />
                   )}
                   {activeMap === 'slope' && (
-                    <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-muted)' }}>
-                      🟢 Green: safe ({'<'}5°) · 🟡 Yellow: moderate (5–15°) · 🔴 Red: steep ({'>'} 15°) · Orange dots: craters
+                    <div style={{ marginTop: 8, display: 'flex', gap: 16, fontSize: 11, color: 'var(--text-muted)' }}>
+                      <div className="legend-item"><div className="legend-dot" style={{ background: 'var(--green)', width: 10, height: 10 }} />Safe ({'<'}5°)</div>
+                      <div className="legend-item"><div className="legend-dot" style={{ background: 'var(--yellow)', width: 10, height: 10 }} />Moderate (5-15°)</div>
+                      <div className="legend-item"><div className="legend-dot" style={{ background: 'var(--red)', width: 10, height: 10 }} />Steep ({'>'} 15°)</div>
+                      <div className="legend-item"><div className="legend-dot" style={{ background: 'var(--orange)', width: 10, height: 10 }} />Craters</div>
                     </div>
                   )}
                 </div>
@@ -102,7 +106,7 @@ export default function TerrainPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {/* Slope histogram */}
                 <div className="card">
-                  <div className="card-header"><span className="card-title">📊 Slope Distribution</span></div>
+                  <div className="card-header"><span className="card-title"><IconChart size={16} /> Slope Distribution</span></div>
                   <div className="card-body">
                     <div style={{ height: 120, display: 'flex', alignItems: 'flex-end', gap: 1 }}>
                       {data.slope_histogram.map((d: any, i: number) => {
@@ -118,14 +122,14 @@ export default function TerrainPage() {
                       })}
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
-                      <span>0°</span><span style={{ color: 'var(--green)' }}>← Safe | Unsafe →</span><span>36°</span>
+                      <span>0°</span><span style={{ color: 'var(--green)' }}>Safe | Unsafe</span><span>36°</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Terrain stats */}
                 <div className="card">
-                  <div className="card-header"><span className="card-title">📐 Terrain Statistics</span></div>
+                  <div className="card-header"><span className="card-title"><IconRuler size={16} /> Terrain Statistics</span></div>
                   <div className="card-body">
                     <div className="metric-row"><span className="label">Mean Slope</span><span className="value">{data.slope_stats.mean.toFixed(2)}°</span></div>
                     <div className="metric-row"><span className="label">Max Slope</span><span className="value">{data.slope_stats.max.toFixed(2)}°</span></div>
@@ -137,7 +141,7 @@ export default function TerrainPage() {
 
                 {/* Crater table */}
                 <div className="card">
-                  <div className="card-header"><span className="card-title">🕳️ Detected Craters</span></div>
+                  <div className="card-header"><span className="card-title"><IconCrater size={16} /> Detected Craters</span></div>
                   <div style={{ padding: '0 16px 16px', overflowX: 'auto' }}>
                     <table className="data-table">
                       <thead>

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import dynamic from 'next/dynamic';
+import { IconTarget, IconMap, IconPin, IconChart } from '@/components/Icons';
 const Heatmap = dynamic(() => import('@/components/Heatmap'), { ssr: false });
 
 function ScoreBar({ label, score, color }: { label: string; score: number; color: string }) {
@@ -43,13 +44,13 @@ export default function LandingSitePage() {
     col: Math.round(s.col / 3),
     color: i === 0 ? '#00ff88' : i === selectedSite ? '#00d4ff' : 'rgba(255,255,255,0.5)',
     size: i === 0 ? 8 : 5,
-    label: i === 0 ? '★' : `${i + 1}`,
+    label: i === 0 ? 'S1' : `${i + 1}`,
   })) || [];
 
   return (
     <>
       <div className="page-header">
-        <div className="page-header-badge">🎯 Landing Site</div>
+        <div className="page-header-badge"><IconTarget size={13} /> Landing Site</div>
         <h1 className="page-title">Landing Site Selection</h1>
         <p className="page-subtitle">
           Multi-criteria evaluation · Safety · Ice proximity · Solar power · Scientific value
@@ -90,7 +91,7 @@ export default function LandingSitePage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div className="card">
                   <div className="card-header">
-                    <span className="card-title">🗺️ Score Maps</span>
+                    <span className="card-title"><IconMap size={16} /> Score Maps</span>
                   </div>
                   <div className="card-body">
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
@@ -110,17 +111,17 @@ export default function LandingSitePage() {
                         overlayPoints={sitePoints}
                       />
                     )}
-                    <div style={{ display: 'flex', gap: 12, marginTop: 10, fontSize: 11, color: 'var(--text-muted)' }}>
-                      <span>🟢 Best site</span>
-                      <span>🔵 Selected</span>
-                      <span>⚪ Alternatives</span>
+                    <div style={{ display: 'flex', gap: 16, marginTop: 10 }}>
+                      <div className="legend-item"><div className="legend-dot" style={{ background: '#00ff88', width: 10, height: 10 }} />Best site</div>
+                      <div className="legend-item"><div className="legend-dot" style={{ background: '#00d4ff', width: 10, height: 10 }} />Selected</div>
+                      <div className="legend-item"><div className="legend-dot" style={{ background: 'rgba(255,255,255,0.5)', width: 10, height: 10 }} />Alternatives</div>
                     </div>
                   </div>
                 </div>
 
                 {/* Ranked site cards */}
                 <div className="card">
-                  <div className="card-header"><span className="card-title">📍 Candidate Sites</span></div>
+                  <div className="card-header"><span className="card-title"><IconPin size={16} /> Candidate Sites</span></div>
                   <div className="card-body" style={{ padding: '12px 20px', display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {data.candidate_sites?.map((s: any, i: number) => (
                       <div key={i}
@@ -129,19 +130,19 @@ export default function LandingSitePage() {
                           padding: '12px 14px',
                           borderRadius: 10,
                           border: `1px solid ${selectedSite === i ? 'var(--border-hover)' : 'var(--border)'}`,
-                          background: selectedSite === i ? 'var(--cyan-dim)' : 'transparent',
+                          background: selectedSite === i ? 'rgba(0,212,255,0.06)' : 'transparent',
                           cursor: 'pointer',
                           transition: 'all 0.2s',
                           display: 'flex', alignItems: 'center', gap: 12,
                         }}>
                         <div style={{
                           width: 32, height: 32, borderRadius: '50%',
-                          background: i === 0 ? 'linear-gradient(135deg, var(--green), var(--cyan))' : 'rgba(0,212,255,0.15)',
+                          background: i === 0 ? 'linear-gradient(135deg, var(--green), var(--cyan))' : 'rgba(0,212,255,0.12)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           fontSize: 13, fontWeight: 700, color: i === 0 ? 'white' : 'var(--cyan)',
                           flexShrink: 0,
                         }}>
-                          {i === 0 ? '★' : i + 1}
+                          {i + 1}
                         </div>
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
@@ -168,8 +169,8 @@ export default function LandingSitePage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                   <div className="card" style={{ border: '1px solid var(--border-hover)' }}>
                     <div className="card-header">
-                      <span className="card-title">🎯 Site {selectedSite + 1} — Detail</span>
-                      {selectedSite === 0 && <span className="badge badge-safe">★ Recommended</span>}
+                      <span className="card-title"><IconTarget size={16} /> Site {selectedSite + 1} — Detail</span>
+                      {selectedSite === 0 && <span className="badge badge-safe">Recommended</span>}
                     </div>
                     <div className="card-body">
                       {/* Score rings */}
@@ -180,7 +181,7 @@ export default function LandingSitePage() {
                       <ScoreBar label="Scientific Value" score={site.scientific_score} color="var(--orange)" />
                       <ScoreBar label="Trafficability" score={site.trafficability_score} color="#f472b6" />
 
-                      <div style={{ marginTop: 16, padding: '12px 14px', background: 'rgba(0,0,0,0.3)', borderRadius: 8, border: '1px solid var(--border)' }}>
+                      <div style={{ marginTop: 16, padding: '12px 14px', background: 'rgba(0,0,0,0.25)', borderRadius: 8, border: '1px solid var(--border)' }}>
                         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>Description</div>
                         <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{site.description}</p>
                       </div>
@@ -188,7 +189,7 @@ export default function LandingSitePage() {
                   </div>
 
                   <div className="card">
-                    <div className="card-header"><span className="card-title">📊 Evaluation Details</span></div>
+                    <div className="card-header"><span className="card-title"><IconChart size={16} /> Evaluation Details</span></div>
                     <div className="card-body">
                       {Object.entries(data.evaluation_criteria).map(([key, desc]: any) => (
                         <div key={key} style={{ padding: '8px 0', borderBottom: '1px solid rgba(0,212,255,0.05)' }}>
