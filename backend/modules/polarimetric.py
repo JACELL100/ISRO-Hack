@@ -16,9 +16,11 @@ Dual-Frequency Analysis (L-band + S-band):
 - Consistency between L-band and S-band ice signatures greatly reduces
   false positives from rough terrain (Nozette et al. 1996 analog)
 """
+
+from typing import Dict, Tuple
+
 import numpy as np
 from scipy.ndimage import uniform_filter
-from typing import Dict, Tuple
 
 
 def multilook(data: np.ndarray, window: int = 5) -> np.ndarray:
@@ -245,7 +247,7 @@ def compute_dual_frequency_analysis(
 
     # Dual-frequency confirmed ice: both bands agree
     ice_dual_confirmed = ice_L & ice_S  # Highest confidence
-    ice_L_only = ice_L & ~ice_S          # L-band only: may be deep ice or roughness
+    ice_L_only = ice_L & ~ice_S  # L-band only: may be deep ice or roughness
 
     # Dual-frequency ice confidence score [0, 1]
     # L-band contribution (primary, deeper penetration)
@@ -279,7 +281,69 @@ def compute_dual_frequency_analysis(
         "n_ice_L": int(ice_L.sum()),
         "n_ice_S": int(ice_S.sum()),
         "n_ice_dual": int(ice_dual_confirmed.sum()),
-        "pct_dual_confirmed": round(float(ice_dual_confirmed.sum()) / max(ice_L.sum(), 1) * 100, 1),
+        "pct_dual_confirmed": round(
+            float(ice_dual_confirmed.sum()) / max(ice_L.sum(), 1) * 100, 1
+        ),
+    }
+
+
+def compute_m_delta_decomposition(
+    S_HH: np.ndarray,
+    S_HV: np.ndarray,
+    S_VH: np.ndarray,
+    S_VV: np.ndarray,
+    window: int = 7,
+) -> Dict[str, np.ndarray]:
+    """
+    m-delta (Raney et al. 2012) decomposition from compact polarimetry proxy.
+    Decomposes total scattering power into:
+      - Volume scattering (Pv): CPR > 1 / depolarized — ice/subsurface
+      - Double-bounce (Pd): corner reflectors — rocks, walls
+      - Surface scattering (Ps): specular — flat crater floor
+
+    In the DFSAR Faustini C2 crater: Pv~49%, Pd~28%, Ps~24%
+    Reference: Shroff et al. (2024 IGARSS), Raney et al. (2012 IEEE-TGARS)
+
+    Uses Stokes vector: [S1=I, S2=Q, S3=U, S4=V] from linear basis.
+    m = degree of polarization (DOP)
+    delta = phase difference (S3 phase-angle proxy)
+    """
+    stokes = compute_stokes_parameters(S_HH, S_HV, S_VH, S_VV, window)
+    S0, S1, S2, S3 = stokes["S0"], stokes["S1"], stokes["S2"], stokes["S3"]
+
+    eps = 1e-10
+    # Degree of polarization
+    m = np.sqrt(S1**2 + S2**2 + S3**2) / (S0 + eps)
+    m = np.clip(m, 0, 1)
+
+    # Delta: relative phase between HH and VV channels (proxy via Stokes)
+    # In circular basis: delta = arctan(S3 / S2) approximately
+    delta = np.arctan2(S3, S2 + eps)  # Phase angle in circular basis
+
+    # m-delta decomposition (Raney 2012):
+    # Ps = (m * S0 * (1 - sin(delta))) / 2  -> surface/specular
+    # Pd = (m * S0 * (1 + sin(delta))) / 2  -> double-bounce
+    # Pv = S0 * (1 - m)                     -> volume/random
+    Pv = S0 * (1.0 - m)  # Volume (depolarized)
+    Ps = (m * S0 * (1.0 - np.sin(delta))) / 2.0  # Surface
+    Pd = (m * S0 * (1.0 + np.sin(delta))) / 2.0  # Double-bounce
+
+    # Normalize to fractions
+    total = Pv + Ps + Pd + eps
+    fv = np.clip(Pv / total, 0, 1)  # Volume fraction
+    fs = np.clip(Ps / total, 0, 1)  # Surface fraction
+    fd = np.clip(Pd / total, 0, 1)  # Double-bounce fraction
+
+    return {
+        "Pv": Pv.astype(np.float32),
+        "Ps": Ps.astype(np.float32),
+        "Pd": Pd.astype(np.float32),
+        "fv": fv.astype(np.float32),
+        "fs": fs.astype(np.float32),
+        "fd": fd.astype(np.float32),
+        "m": m.astype(np.float32),
+        "delta": delta.astype(np.float32),
+        "description": "m-delta decomposition (Raney 2012): Pv=volume, Ps=surface, Pd=double-bounce",
     }
 
 
@@ -294,7 +358,15 @@ def get_statistics(data: np.ndarray, mask: np.ndarray = None) -> Dict:
         values = data.ravel()
 
     if len(values) == 0:
-        return {"mean": 0, "std": 0, "min": 0, "max": 0, "median": 0, "p25": 0, "p75": 0}
+        return {
+            "mean": 0,
+            "std": 0,
+            "min": 0,
+            "max": 0,
+            "median": 0,
+            "p25": 0,
+            "p75": 0,
+        }
 
     return {
         "mean": float(np.mean(values)),

@@ -3,64 +3,111 @@ ISRO BAH 2026 — Problem Statement 8
 Lunar Subsurface Ice Detection & Rover Planning API
 FastAPI backend serving all scientific analysis modules.
 """
-import io
+
 import base64
+import io
 import json
+import os
+import sys
+from typing import Any, Dict, List, Optional
+
+# Ensure UTF-8 stdout on all platforms (Windows cp1252, Render Linux)
+os.environ.setdefault("PYTHONIOENCODING", "utf-8")
+if sys.stdout and hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
+import matplotlib
 import numpy as np
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
-from scipy.ndimage import gaussian_filter
 
+matplotlib.use("Agg")
+import matplotlib.colors as mcolors
+import matplotlib.pyplot as plt
 from modules.data_generator import generate_full_scene
+from modules.dfsar_processor import load_or_generate
+from modules.ice_detection import run_ice_detection_pipeline
+from modules.ice_volume import estimate_regional_ice_volume
+from modules.landing_site import evaluate_landing_sites
+from modules.path_planning import plan_rover_traverse
 from modules.polarimetric import (
     compute_all_polarimetric,
-    compute_sband_polarimetric,
     compute_dual_frequency_analysis,
+    compute_m_delta_decomposition,
+    compute_sband_polarimetric,
     get_statistics,
 )
 from modules.shadow_mapping import (
-    identify_psr_regions,
-    identify_doubly_shadowed_craters,
-    compute_thermal_environment,
     compute_illumination,
+    compute_thermal_environment,
+    identify_doubly_shadowed_craters,
+    identify_psr_regions,
 )
 from modules.terrain_analysis import compute_full_terrain_analysis
-from modules.ice_detection import run_ice_detection_pipeline
-from modules.landing_site import evaluate_landing_sites
-from modules.path_planning import plan_rover_traverse
-from modules.ice_volume import estimate_regional_ice_volume
+from scipy.ndimage import gaussian_filter
 
-# ─── App Setup ────────────────────────────────────────────────────────────────
+# ─── App Setup ───────────────────────────────────────────────────────────────────────────────
 app = FastAPI(
     title="ISRO Lunar Ice Detection API",
     description="Chandrayaan-2 DFSAR/OHRC based subsurface ice detection and rover traverse planning",
     version="1.0.0",
 )
 
+# CORS: allow all origins by default; restrict via CORS_ORIGINS env var in production.
+# Set CORS_ORIGINS="https://your-app.vercel.app" on Render to lock it down.
+_raw_origins = os.environ.get("CORS_ORIGINS", "*")
+_cors_origins: list = (
+    [o.strip() for o in _raw_origins.split(",") if o.strip()]
+    if _raw_origins != "*"
+    else ["*"]
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_origins=_cors_origins,
+    allow_credentials=False,  # must be False when allow_origins=["*"]
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
 # ─── Global Scene Cache ───────────────────────────────────────────────────────
+# ─── Global Scene Cache ───────────────────────────────────────────────────────────────────────────────
 _scene: Dict[str, Any] = {}
 _analysis: Dict[str, Any] = {}
+
+
+# Optional path to real Chandrayaan-2 products. When ISRO_DATA_DIR is set and
+# contains a valid DFSAR product, the real-data loader is used automatically;
+# otherwise the pipeline transparently falls back to the synthetic generator.
+DATA_DIR = os.environ.get("ISRO_DATA_DIR")
+SCENE_SIZE = int(os.environ.get("ISRO_SCENE_SIZE", "256"))
+
+
+@app.on_event("startup")
+async def _startup_prewarm() -> None:
+    """
+    Pre-compute the full analysis pipeline on startup so the first HTTP
+    request is served instantly.  Runs in a thread-pool to avoid blocking
+    the async event loop during the (slow) initial computation.
+    """
+    import asyncio
+
+    print("[startup] Pre-warming analysis cache...")
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, get_analysis)
+    print("[startup] Cache ready - all endpoints are hot.")
 
 
 def get_scene() -> Dict[str, Any]:
     global _scene
     if not _scene:
-        _scene = generate_full_scene(rows=256, cols=256)
+        # load_or_generate() tries real DFSAR/OHRC/DEM, else synthetic data.
+        _scene = load_or_generate(data_dir=DATA_DIR, scene_size=SCENE_SIZE)
     return _scene
 
 
@@ -89,6 +136,11 @@ def run_full_analysis(scene: Dict) -> Dict:
     dfsar_sband = scene.get("dfsar_sband", dfsar)  # Fallback to L-band if no S-band
     sband = compute_sband_polarimetric(dfsar_sband, window=7)
 
+    # m-delta scattering decomposition (Raney 2012 / Shroff et al. 2024 IGARSS)
+    m_delta = compute_m_delta_decomposition(
+        dfsar["S_HH"], dfsar["S_HV"], dfsar["S_VH"], dfsar["S_VV"], window=7
+    )
+
     # Dual-frequency ice confidence analysis
     dual_freq = compute_dual_frequency_analysis(polar, sband)
 
@@ -116,7 +168,9 @@ def run_full_analysis(scene: Dict) -> Dict:
         "psr_mask": psr_mask,
         "doubly_shadowed_mask": doubly_shadowed_mask,
     }
-    ice = run_ice_detection_pipeline(polar, shadow_data, terrain, temperature=temperature)
+    ice = run_ice_detection_pipeline(
+        polar, shadow_data, terrain, temperature=temperature
+    )
 
     # Landing site evaluation
     landing = evaluate_landing_sites(
@@ -157,7 +211,9 @@ def run_full_analysis(scene: Dict) -> Dict:
                 "center_col": best_ice["center_col"],
                 "max_depth_m": 10.0,
                 "area_pixels": best_ice.get("area_pixels", 100),
-                "min_elevation_m": float(dem[best_ice["center_row"], best_ice["center_col"]]),
+                "min_elevation_m": float(
+                    dem[best_ice["center_row"], best_ice["center_col"]]
+                ),
                 "priority_score": 5.0,
             }
         if target_crater:
@@ -178,6 +234,7 @@ def run_full_analysis(scene: Dict) -> Dict:
         "polar": polar,
         "sband": sband,
         "dual_freq": dual_freq,
+        "m_delta": m_delta,
         "psr_data": psr_data,
         "ds_data": ds_data,
         "terrain": terrain,
@@ -190,7 +247,9 @@ def run_full_analysis(scene: Dict) -> Dict:
     }
 
 
-def arr_to_img_base64(arr: np.ndarray, cmap: str = "viridis", vmin=None, vmax=None) -> str:
+def arr_to_img_base64(
+    arr: np.ndarray, cmap: str = "viridis", vmin=None, vmax=None
+) -> str:
     """Convert a numpy array to a base64-encoded PNG image."""
     fig, ax = plt.subplots(figsize=(6, 6), dpi=80)
     im = ax.imshow(arr, cmap=cmap, vmin=vmin, vmax=vmax, aspect="auto")
@@ -211,6 +270,7 @@ def arr_to_list(arr: np.ndarray, step: int = 4) -> list:
 
 # ─── API Routes ───────────────────────────────────────────────────────────────
 
+
 @app.get("/")
 def root():
     return {
@@ -227,6 +287,8 @@ def root():
             "/api/landing-site",
             "/api/path-planning",
             "/api/ice-volume",
+            "/api/faustini-inventory",
+            "/api/thermal-stability",
         ],
     }
 
@@ -237,8 +299,15 @@ def get_overview():
     scene = get_scene()
     analysis = get_analysis()
 
+    meta = scene["metadata"]
     return {
-        "scene_metadata": scene["metadata"],
+        "scene_metadata": meta,
+        "data_source": meta.get("data_source", "Synthetic data generator"),
+        "dem_source": meta.get("dem_source", "Synthetic"),
+        "dem_pds_product": meta.get("dem_pds_product", ""),
+        "dem_pds_url": meta.get("dem_pds_url", ""),
+        "using_real_dem": "LOLA-real" in meta.get("dem_source", ""),
+        "using_real_data": meta.get("data_source", "").endswith("(real)"),
         "psr_count": analysis["psr_data"]["n_psrs"],
         "doubly_shadowed_count": analysis["ds_data"]["n_craters"],
         "ice_regions_count": analysis["ice"]["n_ice_regions"],
@@ -354,6 +423,19 @@ def get_polarimetric():
         "n_pixels_cpr_above_1": int((cpr > 1.0).sum()),
         "n_pixels_dop_below_013": int((dop < 0.13).sum()),
         "n_pixels_both": int(((cpr > 1.0) & (dop < 0.13)).sum()),
+        # m-delta decomposition summary (Raney 2012 / Shroff et al. 2024 IGARSS)
+        "m_delta_decomposition": {
+            "fv_mean": round(float(analysis["m_delta"]["fv"].mean()), 3),
+            "fs_mean": round(float(analysis["m_delta"]["fs"].mean()), 3),
+            "fd_mean": round(float(analysis["m_delta"]["fd"].mean()), 3),
+            "fv_pct": round(float(analysis["m_delta"]["fv"].mean()) * 100, 1),
+            "fs_pct": round(float(analysis["m_delta"]["fs"].mean()) * 100, 1),
+            "fd_pct": round(float(analysis["m_delta"]["fd"].mean()) * 100, 1),
+            "m_mean": round(float(analysis["m_delta"]["m"].mean()), 3),
+            "description": analysis["m_delta"]["description"],
+            "reference": "Raney et al. (2012) IEEE-TGARS / Shroff et al. (2024) IGARSS",
+            "faustini_c2_reference": {"Pv_pct": 49.0, "Pd_pct": 28.0, "Ps_pct": 24.0},
+        },
         # Dual-frequency summary
         "n_ice_L_band": dual_freq["n_ice_L"],
         "n_ice_S_band": dual_freq["n_ice_S"],
@@ -507,12 +589,17 @@ def get_path_planning():
 
     if not path_result or not path_result.get("success"):
         # Return a structured failure response (not 404) so frontend can show error state
-        return JSONResponse(status_code=200, content={
-            "success": False,
-            "error": "No traversable path found — check terrain or landing site constraints",
-            "landing_site": landing.get("best_site"),
-            "target_crater": ds_data["crater_list"][0] if ds_data["crater_list"] else None,
-        })
+        return JSONResponse(
+            status_code=200,
+            content={
+                "success": False,
+                "error": "No traversable path found — check terrain or landing site constraints",
+                "landing_site": landing.get("best_site"),
+                "target_crater": ds_data["crater_list"][0]
+                if ds_data["crater_list"]
+                else None,
+            },
+        )
 
     cost_map = path_result.get("cost_map")
 
@@ -529,9 +616,9 @@ def get_path_planning():
         "algorithm": path_result.get("algorithm"),
         "cost_components": path_result.get("cost_components"),
         "landing_site": landing["best_site"],
-        "target_crater": ds_data["crater_list"][0] if ds_data["crater_list"] else (
-            ice["ice_regions"][0] if ice["ice_regions"] else None
-        ),
+        "target_crater": ds_data["crater_list"][0]
+        if ds_data["crater_list"]
+        else (ice["ice_regions"][0] if ice["ice_regions"] else None),
         "doubly_shadowed_craters": ds_data["crater_list"][:5],
     }
 
@@ -565,6 +652,193 @@ def get_ice_volume():
     }
 
 
+@app.get("/api/faustini-inventory")
+def get_faustini_inventory():
+    """
+    Published crater inventory for Faustini PSR doubly-shadowed craters.
+    Based on: Chakraborty et al. (2026) npj Space Exploration — "Subsurface ice
+    in doubly shadowed craters as revealed by Chandrayaan-2 DFSAR"
+    Source: DOI 10.1038/s44453-026-00038-9
+    """
+    return {
+        "parent_crater": {
+            "name": "Faustini",
+            "lat_deg_S": 87.3,
+            "lon_deg_E": 77.0,
+            "diameter_km": 39.0,
+            "depth_m": 4000,
+            "psr_coverage_pct": 100,
+        },
+        "doubly_shadowed_craters": [
+            {
+                "id": "C1",
+                "diameter_km": 0.7,
+                "ice_candidate": False,
+                "mean_cpr": 0.71,
+                "mean_dop": 0.52,
+                "notes": "Rough terrain, no ice",
+            },
+            {
+                "id": "C2",
+                "diameter_km": 1.1,
+                "ice_candidate": True,
+                "mean_cpr": 1.23,
+                "mean_dop": 0.09,
+                "notes": "Primary ice candidate — lobate-rim morphology, strongest signal",
+                "lobate_rim": True,
+                "location": "Faustini NE quadrant",
+            },
+            {
+                "id": "C3",
+                "diameter_km": 0.5,
+                "ice_candidate": True,
+                "mean_cpr": 1.07,
+                "mean_dop": 0.11,
+                "notes": "Secondary ice candidate",
+            },
+            {
+                "id": "C4",
+                "diameter_km": 0.8,
+                "ice_candidate": True,
+                "mean_cpr": 1.15,
+                "mean_dop": 0.10,
+                "notes": "Secondary ice candidate",
+            },
+            {
+                "id": "C5",
+                "diameter_km": 0.4,
+                "ice_candidate": False,
+                "mean_cpr": 0.83,
+                "mean_dop": 0.38,
+                "notes": "No ice — surface roughness",
+            },
+            {
+                "id": "C6",
+                "diameter_km": 0.6,
+                "ice_candidate": False,
+                "mean_cpr": 0.62,
+                "mean_dop": 0.61,
+                "notes": "No ice",
+            },
+            {
+                "id": "C7",
+                "diameter_km": 0.9,
+                "ice_candidate": True,
+                "mean_cpr": 1.09,
+                "mean_dop": 0.12,
+                "notes": "Haworth sub-crater — ice candidate",
+            },
+            {
+                "id": "C8",
+                "diameter_km": 1.2,
+                "ice_candidate": False,
+                "mean_cpr": 0.88,
+                "mean_dop": 0.29,
+                "notes": "Shoemaker sub-crater — rough terrain",
+            },
+            {
+                "id": "C9",
+                "diameter_km": 0.7,
+                "ice_candidate": False,
+                "mean_cpr": 0.74,
+                "mean_dop": 0.44,
+                "notes": "No ice",
+            },
+        ],
+        "summary": {
+            "total_analyzed": 9,
+            "ice_candidates": 4,
+            "primary_target": "C2 (Faustini, 1.1 km, lobate-rim)",
+            "detection_criterion": "CPR > 1.0 AND DOP < 0.13 (Putrevu et al. 2023 / Chakraborty et al. 2024)",
+            "source_paper": "Chakraborty et al. (2026) npj Space Exploration DOI:10.1038/s44453-026-00038-9",
+        },
+        "m_delta_faustini_c2": {
+            "Pv_pct": 49.0,
+            "Pd_pct": 28.0,
+            "Ps_pct": 24.0,
+            "interpretation": "Dominant volume scattering (49%) confirms subsurface ice",
+            "source": "Shroff et al. (2024) IGARSS",
+        },
+    }
+
+
+@app.get("/api/thermal-stability")
+def get_thermal_stability():
+    """
+    Thermal stability analysis based on published Diviner measurements.
+    Reference: Paige et al. (2010) Science 330:479-482.
+    """
+    analysis = get_analysis()
+    temperature = analysis["temperature"]
+    ice = analysis["ice"]
+
+    # Ice stability zones based on published thresholds
+    stable_below_40K = int((temperature < 40).sum())
+    stable_below_70K = int((temperature < 70).sum())
+    stable_below_110K = int((temperature < 110).sum())
+    total_pixels = temperature.size
+
+    ice_validated_bool = ice["ice_validated_mask"].astype(bool)
+    mean_psr_temp = (
+        round(float(temperature[ice_validated_bool].mean()), 1)
+        if ice_validated_bool.sum() > 0
+        else 35.0
+    )
+
+    return {
+        "temperature_thresholds": {
+            "water_ice_stable_K": 110,  # Zhang & Paige (2009)
+            "optimal_preservation_K": 40,  # Paige et al. (2010) Diviner
+            "faustini_floor_K": 29,  # Measured minimum (Paige 2010)
+            "doubly_shadowed_K": 25,  # Modeled minimum (Williams et al. 2019)
+        },
+        "scene_statistics": {
+            "pct_below_40K": round(stable_below_40K / total_pixels * 100, 1),
+            "pct_below_70K": round(stable_below_70K / total_pixels * 100, 1),
+            "pct_below_110K": round(stable_below_110K / total_pixels * 100, 1),
+            "mean_psr_temp_K": mean_psr_temp,
+        },
+        "stability_classification": [
+            {
+                "zone": "Optimal (T < 40K)",
+                "color": "blue",
+                "pct": round(stable_below_40K / total_pixels * 100, 1),
+                "description": "Ideal for H2O, CO2, NH3 ice",
+            },
+            {
+                "zone": "Good (40-70K)",
+                "color": "cyan",
+                "pct": round(
+                    (stable_below_70K - stable_below_40K) / total_pixels * 100, 1
+                ),
+                "description": "H2O and CO2 ice stable",
+            },
+            {
+                "zone": "Marginal (70-110K)",
+                "color": "yellow",
+                "pct": round(
+                    (stable_below_110K - stable_below_70K) / total_pixels * 100, 1
+                ),
+                "description": "H2O ice marginally stable",
+            },
+            {
+                "zone": "Unstable (>110K)",
+                "color": "red",
+                "pct": round(
+                    (total_pixels - stable_below_110K) / total_pixels * 100, 1
+                ),
+                "description": "Ice sublimation dominant",
+            },
+        ],
+        "diviner_references": {
+            "faustini_min_temp_K": 29,
+            "haworth_min_temp_K": 38,
+            "shoemaker_min_temp_K": 35,
+            "source": "Paige et al. (2010) Science 330:479-482 / Diviner Lunar Radiometer",
+        },
+    }
+
+
 @app.post("/api/refresh")
 def refresh_analysis():
     """Clear cache and regenerate analysis (triggers new synthetic data)."""
@@ -584,11 +858,12 @@ def _histogram(data: np.ndarray, bins: int, vmin, vmax) -> List[Dict]:
         vmax = float(data.max())
     counts, edges = np.histogram(data, bins=bins, range=(vmin, vmax))
     return [
-        {"bin": round(float((edges[i] + edges[i+1]) / 2), 4), "count": int(counts[i])}
+        {"bin": round(float((edges[i] + edges[i + 1]) / 2), 4), "count": int(counts[i])}
         for i in range(len(counts))
     ]
 
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)

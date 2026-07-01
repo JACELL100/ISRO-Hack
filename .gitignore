@@ -27,6 +27,11 @@ frontend/.env.production.local
 *.tiff
 data/
 
+# ─── Exception: commit the pre-built LOLA DEM (~1 MB) so Render has it ───────
+!backend/data/
+!backend/data/faustini_dem.npy
+!backend/data/faustini_metadata.json
+
 # ─── IDE ──────────────────────────────────────────────────────────────────────
 .vscode/
 .idea/

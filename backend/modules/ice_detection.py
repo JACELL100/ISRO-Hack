@@ -14,22 +14,27 @@ Additional cross-validation:
     - Morphological consistency (lobate crater rims)
     - Dual-frequency (L-band + S-band) consistency check
 """
-import numpy as np
-from scipy.ndimage import (
-    label, binary_dilation, binary_erosion, gaussian_filter, uniform_filter
-)
+
 from typing import Dict, List, Tuple
 
+import numpy as np
+from scipy.ndimage import (
+    binary_dilation,
+    binary_erosion,
+    gaussian_filter,
+    label,
+    uniform_filter,
+)
 
 # ─── Detection Thresholds (from published literature) ──────────────────────────
-CPR_THRESHOLD = 1.0       # Putrevu et al. 2023
-DOP_THRESHOLD = 0.13      # Chakraborty et al. 2024
+CPR_THRESHOLD = 1.0  # Putrevu et al. 2023
+DOP_THRESHOLD = 0.13  # Chakraborty et al. 2024
 TEMP_THRESHOLD_K = 110.0  # Ice stability
 CONFIDENCE_WEIGHTS = {
-    "cpr_dop": 0.50,      # Primary radar criterion
-    "shadow": 0.25,        # Inside PSR/shadow
-    "morphology": 0.15,    # Lobate crater rim
-    "temperature": 0.10,   # Thermal environment
+    "cpr_dop": 0.50,  # Primary radar criterion
+    "shadow": 0.25,  # Inside PSR/shadow
+    "morphology": 0.15,  # Lobate crater rim
+    "temperature": 0.10,  # Thermal environment
 }
 
 
@@ -62,7 +67,9 @@ def detect_ice_candidates(
 
     # Temperature confidence (cooler → higher confidence)
     if temperature is not None:
-        temp_confidence = np.clip((TEMP_THRESHOLD_K - temperature) / TEMP_THRESHOLD_K, 0, 1)
+        temp_confidence = np.clip(
+            (TEMP_THRESHOLD_K - temperature) / TEMP_THRESHOLD_K, 0, 1
+        )
     else:
         temp_confidence = np.zeros_like(cpr)
 
@@ -74,12 +81,14 @@ def detect_ice_candidates(
         context_confidence += psr_mask.astype(float) * 0.6
     context_confidence = np.clip(context_confidence, 0, 1)
 
-    # Combined confidence — BUG FIX: was ["shadow"] + ["shadow"], now correctly ["shadow"] + ["morphology"]
+    # Combined confidence.
+    # morphology + temperature both proxy through temp_confidence here;
+    # their weights are merged so the total always sums to 1.0.
     total_confidence = (
         CONFIDENCE_WEIGHTS["cpr_dop"] * radar_confidence
         + CONFIDENCE_WEIGHTS["shadow"] * context_confidence
-        + CONFIDENCE_WEIGHTS["morphology"] * temp_confidence
-        + CONFIDENCE_WEIGHTS["temperature"] * temp_confidence
+        + (CONFIDENCE_WEIGHTS["morphology"] + CONFIDENCE_WEIGHTS["temperature"])
+        * temp_confidence
     )
     total_confidence = np.clip(total_confidence, 0, 1)
 
@@ -107,7 +116,7 @@ def classify_ice_regions(
 ) -> Dict:
     """
     Label and classify detected ice regions into priority tiers.
-    
+
     Priority Tier 1: Inside doubly shadowed craters (highest confidence)
     Priority Tier 2: Inside PSR but outside doubly shadowed
     Priority Tier 3: Radar signature only (lower confidence)
@@ -123,7 +132,7 @@ def classify_ice_regions(
 
         ys, xs = np.where(mask)
         mean_confidence = float(confidence[mask].mean())
-        
+
         # Classify tier
         if doubly_shadowed is not None and (doubly_shadowed[mask] > 0).any():
             tier = 1
@@ -135,17 +144,19 @@ def classify_ice_regions(
             tier = 3
             tier_label = "Moderate-Confidence Ice Signature"
 
-        regions.append({
-            "id": int(i),
-            "area_pixels": area,
-            "area_km2": round(area * (30**2) / 1e6, 4),
-            "center_row": int(ys.mean()),
-            "center_col": int(xs.mean()),
-            "mean_confidence": round(mean_confidence, 3),
-            "priority_tier": tier,
-            "tier_label": tier_label,
-            "bbox": [int(ys.min()), int(xs.min()), int(ys.max()), int(xs.max())],
-        })
+        regions.append(
+            {
+                "id": int(i),
+                "area_pixels": area,
+                "area_km2": round(area * (30**2) / 1e6, 4),
+                "center_row": int(ys.mean()),
+                "center_col": int(xs.mean()),
+                "mean_confidence": round(mean_confidence, 3),
+                "priority_tier": tier,
+                "tier_label": tier_label,
+                "bbox": [int(ys.min()), int(xs.min()), int(ys.max()), int(xs.max())],
+            }
+        )
 
     # Sort by tier then confidence
     regions.sort(key=lambda x: (x["priority_tier"], -x["mean_confidence"]))
@@ -181,7 +192,8 @@ def compute_ice_probability_map(
     radar_score = np.clip(
         0.5 * np.clip((cpr - CPR_THRESHOLD) / 2.0, 0, 1)
         + 0.5 * np.clip((DOP_THRESHOLD - dop) / DOP_THRESHOLD, 0, 1),
-        0, 1,
+        0,
+        1,
     )
 
     # Shadow score

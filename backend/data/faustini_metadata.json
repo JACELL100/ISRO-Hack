@@ -1,0 +1,16 @@
+{
+  "pixel_size_m": 20.0,
+  "center_lat": -87.3,
+  "center_lon": 77.0,
+  "data_source": "LOLA-real",
+  "elevation_min_m": -3365.5,
+  "elevation_max_m": -981.25,
+  "array_shape": [
+    512,
+    512
+  ],
+  "coverage_km": 10.24,
+  "pds_product": "LDEM_85S_40M",
+  "pds_url": "https://imbrium.mit.edu/DATA/LOLA_GDR/POLAR/IMG/LDEM_85S_40M.IMG",
+  "notes": "South polar stereographic 512x512 tile centred on Faustini crater (87.3\u00b0S 77\u00b0E). Pixel size resampled to 20 m/px from 40 m/px PDS product. Sub-crater C2 per Putrevu et al. 2023 is at ~+3.5 km E / +1.5 km N of tile centre."
+}

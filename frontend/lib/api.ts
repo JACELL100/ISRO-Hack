@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 async function fetchApi(endpoint: string) {
   const res = await fetch(`${API_URL}${endpoint}`, {
@@ -9,13 +9,17 @@ async function fetchApi(endpoint: string) {
 }
 
 export const api = {
-  overview: () => fetchApi('/api/overview'),
-  shadowMapping: () => fetchApi('/api/shadow-mapping'),
-  polarimetric: () => fetchApi('/api/polarimetric'),
-  iceDetection: () => fetchApi('/api/ice-detection'),
-  terrain: () => fetchApi('/api/terrain'),
-  landingSite: () => fetchApi('/api/landing-site'),
-  pathPlanning: () => fetchApi('/api/path-planning'),
-  iceVolume: () => fetchApi('/api/ice-volume'),
-  refresh: () => fetch(`${API_URL}/api/refresh`, { method: 'POST' }).then(r => r.json()),
+  overview: () => fetchApi("/api/overview"),
+  shadowMapping: () => fetchApi("/api/shadow-mapping"),
+  polarimetric: () => fetchApi("/api/polarimetric"),
+  dualFrequency: () => fetchApi("/api/dual-frequency"),
+  iceDetection: () => fetchApi("/api/ice-detection"),
+  terrain: () => fetchApi("/api/terrain"),
+  landingSite: () => fetchApi("/api/landing-site"),
+  pathPlanning: () => fetchApi("/api/path-planning"),
+  iceVolume: () => fetchApi("/api/ice-volume"),
+  faustiniInventory: () => fetchApi("/api/faustini-inventory"),
+  thermalStability: () => fetchApi("/api/thermal-stability"),
+  refresh: () =>
+    fetch(`${API_URL}/api/refresh`, { method: "POST" }).then((r) => r.json()),
 };
