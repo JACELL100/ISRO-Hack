@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://backend-isrohack.onrender.com";
 
 async function fetchApi(endpoint: string) {
   // 60-second timeout — Render free tier can take ~30s to wake from sleep

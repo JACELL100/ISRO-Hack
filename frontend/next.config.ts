@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
   // Default fallback for local development only:
   env: {
     NEXT_PUBLIC_API_URL:
-      process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000",
+      process.env.NEXT_PUBLIC_API_URL || "https://backend-isrohack.onrender.com",
   },
   // NOTE: output:'standalone' is for Docker / self-hosted Node deployments only.
   // Vercel manages its own output format — do NOT set output:'standalone' here.

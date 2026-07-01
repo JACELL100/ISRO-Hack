@@ -7,7 +7,7 @@ export default function ApiStatus() {
   useEffect(() => {
     const check = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://backend-isrohack.onrender.com'}/`, {
           signal: AbortSignal.timeout(65000), // Render free tier can take ~30-60s to wake
         });
         setStatus(res.ok ? 'online' : 'offline');
