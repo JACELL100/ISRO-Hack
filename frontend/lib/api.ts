@@ -1,11 +1,24 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 async function fetchApi(endpoint: string) {
-  const res = await fetch(`${API_URL}${endpoint}`, {
-    next: { revalidate: 0 }, // Always fresh in development
-  });
-  if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`);
-  return res.json();
+  // 60-second timeout — Render free tier can take ~30s to wake from sleep
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 60_000);
+  try {
+    const res = await fetch(`${API_URL}${endpoint}`, {
+      next: { revalidate: 0 },
+      signal: controller.signal,
+    });
+    if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`);
+    return res.json();
+  } catch (err: any) {
+    if (err.name === "AbortError") {
+      throw new Error("Request timed out — backend may be waking up (Render free tier). Please wait 30s and refresh.");
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export const api = {

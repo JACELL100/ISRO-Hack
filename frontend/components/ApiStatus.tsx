@@ -8,7 +8,7 @@ export default function ApiStatus() {
     const check = async () => {
       try {
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`, {
-          signal: AbortSignal.timeout(3000),
+          signal: AbortSignal.timeout(65000), // Render free tier can take ~30-60s to wake
         });
         setStatus(res.ok ? 'online' : 'offline');
       } catch {
