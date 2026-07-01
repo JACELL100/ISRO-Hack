@@ -25,7 +25,7 @@ function ApiStatusBadge() {
     const check = async () => {
       try {
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || 'https://backend-isrohack.onrender.com'}/`,
+          `https://backend-isrohack.onrender.com/`,
           { signal: AbortSignal.timeout(3000) }
         );
         setStatus(res.ok ? 'online' : 'offline');
